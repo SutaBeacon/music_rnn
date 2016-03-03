@@ -4,9 +4,11 @@ import glob
 import os
 import sys
 import time
-
 import numpy
+import random
 import pylab
+import json
+
 import theano
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
@@ -21,13 +23,11 @@ numpy.random.seed(2209)
 
 
 def maxProbs(pb):
-	maxP = pb[0]
-	maxIndex=0
-	for i in numpy.arange(len(pb)):
-		if pb[i] >pb[maxIndex]:
-			maxIndex=i
-	return i
-	
+	pb_sum = numpy.cumsum(pb)
+	p = random.random()
+	for i in numpy.arange(len(pb_sum)):
+		if(pb_sum[i] > p):
+			return i	
 		
 class rnnmlp ():
 	def __init__(self, r=(21, 109), dt=0.3):	
@@ -51,13 +51,15 @@ class rnnmlp ():
 		rmsprop = RMSprop(lr=lr, rho=0.9, epsilon=1e-06)
 		self.rnnModel.compile(loss='categorical_crossentropy', optimizer=rmsprop)
 	
-	def train(self, files, weightSaveFile, batchSize=1, numEpoch=200):
+	def train(self, fileName, weightSaveFile, batchSize=1, numEpoch=200):
 		print('load data ---------------')
-		assert len(files) > 0, 'Training set is empty!'
-		dataset = [midiread(f, self.r, self.dt).piano_roll.astype(theano.config.floatX) for f in files]
+		
+		file_train=os.path.join(os.path.split(os.path.dirname(__file__))[0],
+				'data',fileName,'train','*.mid')
+		dataset = [midiread(f, self.r, self.dt).piano_roll.astype(theano.config.floatX) for f in glob.glob(file_train)]
 		
 		file_test=os.path.join(os.path.split(os.path.dirname(__file__))[0],
-				'data','Major','test','*.mid')
+				'data',fileName,'test','*.mid')
 		testdataset = [midiread(f, self.r, self.dt).piano_roll.astype(theano.config.floatX) for f in glob.glob(file_test)]
 		print('load done --------------')
 		try:
@@ -94,27 +96,51 @@ class rnnmlp ():
 		return test_accuracy
 
 
-	def generate(self, filename, nSteps=80 ,show=False):
-		init_sequence = numpy.zero((1, nSteps +1, maxFeatures))
-		init_sequence[:, 0, maxFeatures-1] = 1
+	def generate(self, initChord, filename, nSteps=80 ,show=False):
+		init_sequence = numpy.zeros((1, nSteps +1, maxFeatures))
+		init_sequence[:, 0, initChord-self.r[0]] = 1
 		for i in numpy.arange(nSteps):
-			probs = self.rnnModel.predict_proba(init_sequence, batchSize=1)[:, i, :]
-			for j in numpy.arrange(len(init_sequence)):
-				init_sequence[j, i+1, maxProbs(probs[j,:])] = 1
+			probs = self.rnnModel.predict_proba(init_sequence)[:, i, :]
+			for j in numpy.arange(len(init_sequence)):
+				init_sequence[j, i+1, maxProbs(probs[j,0:(maxFeatures-1)])] = 1
 
-		generate_sq = [sq[1:].nonzero()[1] for sq in init_sequence] 
-		midiwrite(filename, generate_sq, self.r, self.dt)
+		generate_sq = [sq[:,0:(maxFeatures-1)].nonzero()[1] for sq in init_sequence] 
+		print(len(generate_sq))
+		print(generate_sq[0] + self.r[0])
+		midiwrite(filename, init_sequence[0,:,0:(maxFeatures-1)], self.r, self.dt)
 
 	def loadModel(self, weightSaveFile):
-		self.rnn_model.load_weights(weightSaveFile)
+		self.rnnModel.load_weights(weightSaveFile)
 
-if __name__=='__main__':
+
+def trainModel():
 #input: nHidden, lr, saveFile
-	maxFeatures = 88 + 1
-	model = rnnmlp();
 	#model.SimpleRNNModel(nHidden=150, lr=0.01)	
 	model.LSTMModel(nHidden=int(sys.argv[1]), lr=float(sys.argv[2]))	
-	file_path=os.path.join(os.path.split(os.path.dirname(__file__))[0],
-				'data','Major','train','*.mid')
-	model.train(glob.glob(file_path),sys.argv[3],batchSize=1, numEpoch=120)
+	model.train(dataType,sys.argv[3],batchSize=1, numEpoch=120)
+
+def GTrainModel():
+	model.LSTMModel(nHidden=int(sys.argv[1]), lr=float(sys.argv[2]))	
+	model.loadModel(sys.argv[3])	
+	model.train(dataType,sys.argv[3],batchSize=1, numEpoch=50)
+
+def generateModel():
+	init_Lsystem()
+	model.LSTMModel(nHidden=int(sys.argv[1]), lr=float(sys.argv[2]))	
+	model.loadModel(sys.argv[3])
+	model.generate(21,"sample11.mid",nSteps=50)	
+	model.generate(32,"sample22.mid",nSteps=50)	
+	model.generate(56,"sample33.mid",nSteps=50)	
 	
+if __name__=='__main__':
+	
+	maxFeatures=88+1
+	model = rnnmlp()
+	dataType="Major"
+
+#	trainModel()
+	GTrainModel()
+#	generateModel()
+
+#	fp=open('./data/MajorChord.json')
+#	chord=json.load(fp)
