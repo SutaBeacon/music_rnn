@@ -17,7 +17,10 @@ class LSystem():
 			state,opera=line.strip('\n').split('\t')
 			self.operators[state] = opera
 		f.close()
-
+	
+	'''
+	get the next notes by Lsystem and the probability of each notes
+	'''
 	def getMaxProbs(self, pb, Max=True):
 		chords_next, opers_next= self.getNextChords()	#the next probabiliti chord
 
@@ -35,7 +38,10 @@ class LSystem():
 		self.cur_state.append( maxState[0] )			
 		self.cur_chord.append( maxChord )
 		return maxChord - self.r[0]
-			
+	
+	'''
+	get the next three probable notes by current state,current note
+	'''		
 	def getNextChords(self):
 		cur_state = self.cur_state[-1]
 		cur_chord = self.cur_chord[-1]
