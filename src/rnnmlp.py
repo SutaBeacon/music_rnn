@@ -34,6 +34,10 @@ class rnnmlp ():
                 self.dt=dt
                 self.rnnModel = Sequential()
                 self.maxFeatures=r[1]-r[0] +1
+
+	'''
+	simple RNN model, 
+	'''
         def SimpleRNNModel(self, nHidden=120, lr = 0.01):
                 self.rnnModel.add(SimpleRNN( nHidden, input_shape =( None, self.maxFeatures), activation='sigmoid', return_sequences=True))
                 self.rnnModel.add(TimeDistributedDense(self.maxFeatures))
@@ -41,6 +45,9 @@ class rnnmlp ():
                 rmsprop = RMSprop(lr=lr, rho=0.9, epsilon=1e-06)
                 self.rnnModel.compile(loss='categorical_crossentropy', optimizer=rmsprop)
 
+	'''
+	LSTM model
+	'''
         def LSTMModel(self, nHidden=150, lr = 0.01):
 #               print('nHidden: %i\tlr: %.3f' % ( nHidden, lr) )
                 self.rnnModel.add(LSTM( nHidden, activation='sigmoid', input_shape =( None, self.maxFeatures), return_sequences=True))
@@ -51,7 +58,13 @@ class rnnmlp ():
                 rmsprop = RMSprop(lr=lr, rho=0.9, epsilon=1e-06)
                 self.rnnModel.compile(loss='categorical_crossentropy', optimizer=rmsprop)
 
-        def train(self, file_name, weight_save_file, batch_size=1, num_epoch=200):
+        '''
+	train module :
+	train model , 
+	file_name, the name of train or test file
+	weight_save_file, save the model parameters
+	'''
+	def train(self, file_name, weight_save_file, batch_size=1, num_epoch=200):
                 print('load data ---------------')
 
                 file_train=os.path.join(os.path.split(os.path.dirname(__file__))[0],
@@ -84,6 +97,11 @@ class rnnmlp ():
                         self.rnnModel.save_weights(weight_save_file)
                 except KeyboardInterrupt:
                         print('interrupt by user !')
+	
+	'''
+	evaluate module :
+	evaluate model with test data, compute cost and accuracy
+	'''
         def evaluate(self, test_dataset):
                 test_accuracy =[]
                 for s, sequence in enumerate(test_dataset):
@@ -95,7 +113,19 @@ class rnnmlp ():
                         test_accuracy.append(accu)
                 return test_accuracy
 
-
+	'''
+	generate function : 
+	generate music or chord,
+	init_chord: the first note of the generate sequence
+	file_name: file to save the sequence of generate notes
+	LS : if true , add Lsystem , generate chord
+		if false, no Lsystem, generate music notes
+	chord_name: chord name under condition of LS = True
+	chord_file: notes of all kinds of chords, load file
+	state_file: Lsystem model parameters, load file
+	n_steps: the length of generate sequence
+	r: notes which counts
+	'''
         def generate(self, init_chord, file_name, LS=False, chord_name=None, chord_file=None, state_file=None, n_steps=80, r=(21,109)):
 		if(LS):
 			Lsystem = LSystem(chord_name, init_chord, chord_file, state_file, r)
@@ -117,7 +147,9 @@ class rnnmlp ():
 
 
 
-
+	'''
+	load module: load model
+	'''
         def loadModel(self, weight_save_file):
                 self.rnnModel.load_weights(weight_save_file)
 
