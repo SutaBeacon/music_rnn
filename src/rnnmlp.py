@@ -9,24 +9,26 @@ import numpy
 import random
 import pylab
 import json
-
 import theano
 import theano.tensor as T
 from theano.tensor.shared_randomstreams import RandomStreams
 from midi.utils import midiread, midiwrite
 from keras.layers.core import Dense, TimeDistributedDense, Activation
-from keras.layers.recurrent import SimpleRNN, LSTM
+from keras.layers.recurrent import SimpleRNN, LSTM, GRU
 from keras.layers.embeddings import Embedding
 from keras.models import Sequential
 from keras.optimizers import SGD, RMSprop
-from LSystem import LSystem
+from LSystem import *
 
-def maxProbs(pb):
-        pb_sum = numpy.cumsum(pb)
-        p = random.random()
-        for i in numpy.arange(len(pb_sum)):
-                if(pb_sum[i] > p):
-                        return i
+import matplotlib
+matplotlib.use('Agg')
+
+#def maxProbs(pb):
+#        pb_sum = numpy.cumsum(pb)
+#        p = random.random()
+#        for i in numpy.arange(len(pb_sum)):
+#                if(pb_sum[i] > p):
+#                        return i
 
 class rnnmlp ():
         def __init__(self, r=(21, 109), dt=0.3):
@@ -50,7 +52,8 @@ class rnnmlp ():
 	'''
         def LSTMModel(self, nHidden=150, lr = 0.01):
 #               print('nHidden: %i\tlr: %.3f' % ( nHidden, lr) )
-                self.rnnModel.add(LSTM( nHidden, activation='sigmoid', input_shape =( None, self.maxFeatures), return_sequences=True))
+                self.rnnModel.add(GRU( nHidden, activation='sigmoid', input_shape =( None, self.maxFeatures), return_sequences=True))
+#                self.rnnModel.add(LSTM( nHidden, activation='sigmoid', input_shape =( None, nHidden), return_sequences=True))
                 self.rnnModel.add(TimeDistributedDense(nHidden))
                 self.rnnModel.add(Activation('relu'))
                 self.rnnModel.add(TimeDistributedDense(self.maxFeatures))
@@ -135,15 +138,24 @@ class rnnmlp ():
                         probs = self.rnnModel.predict_proba(init_sequence)[:, i, :]
                         for j in numpy.arange(len(init_sequence)):
 				if(LS):
-					ind = Lsystem.getMaxProbs(probs[j,0:(self.maxFeatures-1)])
+					ind = Lsystem.getMaxProbs(probs[j,0:(self.maxFeatures-1)],True)
 				else:
 					ind = maxProbs(probs[j,0:(self.maxFeatures-1)])
                                 init_sequence[j, i+1, ind] = 1
 
                 generate_sq = [sq[:,0:(self.maxFeatures-1)].nonzero()[1] for sq in init_sequence]
                 print(generate_sq[0] + self.r[0])
-		print(Lsystem.cur_chord)
+		if(LS):
+			print(Lsystem.cur_chord)
+			print(Lsystem.cur_state)
+			print(Lsystem.cur_opes)
                 midiwrite(file_name, init_sequence[0,:,0:(self.maxFeatures-1)], self.r, self.dt)
+		extent = (0, self.dt * len(init_sequence[0,:,0:(self.maxFeatures-1)])) + self.r
+		pylab.figure()
+		pylab.imshow(init_sequence[0,:,0:(self.maxFeatures-1)].T, origin='lower', aspect='auto',interpolation='nearest', cmap=pylab.cm.gray_r,extent=extent)
+		pylab.xlabel('time (s)')
+		pylab.ylabel('MIDI note number')
+		pylab.title('generated piano-roll')
 
 
 

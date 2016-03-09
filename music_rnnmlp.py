@@ -34,15 +34,19 @@ def generateModel():
 	model.loadModel(sys.argv[3])
 	chord_file = "./data/MajorChord.json"
 	state_file = "./data/LSystem.txt"
-	model.generate(24,"./musicResult/sample11.mid",True, 'C', chord_file, state_file, n_steps=80)	
-	model.generate(52,"./musicResult/sample22.mid",True, 'C+', chord_file, state_file, n_steps=80)	
-	model.generate(57,"./musicResult/sample33.mid",True, 'D+', chord_file, state_file, n_steps=80)	
+	model.generate(28,"./musicResult/sample1_250E.mid",True, 'E', chord_file, state_file, n_steps=80)	
+	model.generate(28,"./musicResult/sample2_250E.mid",True, 'Emin', chord_file, state_file, n_steps=80)	
+	model.generate(40,"./musicResult/sample3_250E.mid",True, 'Emin+', chord_file, state_file, n_steps=80)	
+#	model.generate(31,"./musicResult/sample4_250G.mid",True, 'Gmin', chord_file, state_file, n_steps=80)	
+	model.generate(40,"./musicResult/sample5_250E.mid",True, 'Eo', chord_file, state_file, n_steps=80)	
+#	model.generate(34,"./musicResult/sample3_250B.mid",True, 'Bb', chord_file, state_file, n_steps=80)	
+#	model.generate(62,"./musicResult/sample3_250.mid",n_steps=80)	
 	
 if __name__=='__main__':
 	
 	model = rnnmlp()
 	dataType="Major"
 
-#	trainModel()
+	trainModel()
 #	GTrainModel()
-	generateModel()
+#	generateModel()
